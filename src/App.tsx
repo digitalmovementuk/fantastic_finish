@@ -211,6 +211,8 @@ function getInitials(name: string) {
     .toUpperCase();
 }
 
+const COOKIE_KEY = "ff-cookie-consent-v1";
+
 function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -218,7 +220,41 @@ function App() {
   const [submitted, setSubmitted] = useState(false);
   const [bedrooms, setBedrooms] = useState("3");
   const [openFaq, setOpenFaq] = useState(0);
+  const [cookieChoice, setCookieChoice] = useState<"accepted" | "rejected" | null>(null);
+  const [privacyOpen, setPrivacyOpen] = useState(false);
+  const [scrollProgress, setScrollProgress] = useState(0);
   const reduceMotion = useReducedMotion();
+
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem(COOKIE_KEY);
+      if (stored === "accepted" || stored === "rejected") {
+        setCookieChoice(stored);
+      }
+    } catch {
+      /* localStorage unavailable */
+    }
+  }, []);
+
+  const setConsent = (value: "accepted" | "rejected") => {
+    setCookieChoice(value);
+    try {
+      window.localStorage.setItem(COOKIE_KEY, value);
+    } catch {
+      /* localStorage unavailable */
+    }
+  };
+
+  useEffect(() => {
+    if (privacyOpen) {
+      const previousOverflow = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = previousOverflow;
+      };
+    }
+    return undefined;
+  }, [privacyOpen]);
 
   const quoteRange = useMemo(() => {
     const base = Number(bedrooms) || 3;
@@ -236,6 +272,10 @@ function App() {
 
       setScrolled(window.scrollY > 24);
       setShowSticky(pastHero && beforeFooter);
+
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      const progress = docHeight > 0 ? Math.min(100, (window.scrollY / docHeight) * 100) : 0;
+      setScrollProgress(progress);
     };
 
     onScroll();
@@ -280,6 +320,20 @@ function App() {
         Skip to content
       </a>
 
+      <div
+        className="scroll-progress"
+        role="progressbar"
+        aria-label="Page scroll progress"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={Math.round(scrollProgress)}
+      >
+        <div
+          className="scroll-progress__bar"
+          style={{ transform: `scaleX(${scrollProgress / 100})` }}
+        />
+      </div>
+
       <header className={`site-header ${scrolled ? "site-header--scrolled" : ""}`}>
         <div className="top-strip">
           <span className="inline-flex items-center gap-2">
@@ -297,7 +351,7 @@ function App() {
             <img src={logo} alt="Fantastic Finish Ltd" />
           </a>
 
-          <div className="hidden items-center gap-8 lg:flex">
+          <div className="hidden items-center gap-10 lg:flex">
             {navItems.map((item) => (
               <a key={item.href} className="nav-link" href={item.href}>
                 {item.label}
@@ -500,6 +554,19 @@ function App() {
                   {submitted ? "Thanks — we'll be in touch within 24h" : "Send quote request"}
                   <ArrowRight aria-hidden="true" size={16} />
                 </motion.button>
+
+                <motion.p className="quote-form__privacy" variants={fadeUp}>
+                  By submitting, you agree to be contacted about your quote. Your details are
+                  used only for that purpose. Read our{" "}
+                  <button
+                    type="button"
+                    className="quote-form__privacy-link"
+                    onClick={() => setPrivacyOpen(true)}
+                  >
+                    privacy notice
+                  </button>
+                  .
+                </motion.p>
               </motion.form>
             </motion.div>
           </div>
@@ -990,8 +1057,33 @@ function App() {
           </span>
         </div>
         <div className="footer__bottom">
-          <span>© {new Date().getFullYear()} Fantastic Finish Ltd · Fareham, Hampshire</span>
-          <span>Built with care for local homes.</span>
+          <span>
+            © {new Date().getFullYear()} Fantastic Finish Ltd · Fareham, Hampshire, United Kingdom
+          </span>
+          <div className="footer__legal">
+            <button
+              type="button"
+              className="footer__legal-link"
+              onClick={() => setPrivacyOpen(true)}
+            >
+              Privacy notice
+            </button>
+            <span aria-hidden="true">·</span>
+            <button
+              type="button"
+              className="footer__legal-link"
+              onClick={() => {
+                try {
+                  window.localStorage.removeItem(COOKIE_KEY);
+                } catch {
+                  /* ignore */
+                }
+                setCookieChoice(null);
+              }}
+            >
+              Cookie settings
+            </button>
+          </div>
         </div>
       </footer>
 
@@ -1010,6 +1102,136 @@ function App() {
           <Phone aria-hidden="true" size={18} />
         </a>
       </div>
+
+      {cookieChoice === null ? (
+        <div className="cookie-banner" role="dialog" aria-labelledby="cookie-title">
+          <div className="cookie-banner__copy">
+            <strong id="cookie-title">Cookies on this site</strong>
+            <p>
+              We use only essential cookies to make this site work. We do not use tracking or
+              advertising cookies. See our{" "}
+              <button
+                type="button"
+                className="cookie-banner__link"
+                onClick={() => setPrivacyOpen(true)}
+              >
+                privacy notice
+              </button>{" "}
+              for details.
+            </p>
+          </div>
+          <div className="cookie-banner__actions">
+            <button
+              type="button"
+              className="button button--ghost cookie-banner__btn"
+              onClick={() => setConsent("rejected")}
+            >
+              Reject
+            </button>
+            <button
+              type="button"
+              className="button button--green cookie-banner__btn"
+              onClick={() => setConsent("accepted")}
+            >
+              Accept
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {privacyOpen ? (
+        <div
+          className="privacy-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="privacy-title"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) setPrivacyOpen(false);
+          }}
+        >
+          <div className="privacy-modal">
+            <button
+              type="button"
+              className="privacy-modal__close"
+              aria-label="Close privacy notice"
+              onClick={() => setPrivacyOpen(false)}
+            >
+              <X aria-hidden="true" size={20} />
+            </button>
+            <h2 id="privacy-title">Privacy Notice</h2>
+            <p className="privacy-modal__updated">Last updated: April 2026</p>
+
+            <h3>Who we are</h3>
+            <p>
+              Fantastic Finish Ltd ("we", "us") is a window cleaning business based in Fareham,
+              Hampshire, United Kingdom. We are the data controller for the personal data
+              collected through this website.
+            </p>
+
+            <h3>What data we collect</h3>
+            <p>
+              When you submit the quote form, we collect the name, phone number, property details
+              and message you provide. We may also receive your email address if you contact us
+              by email.
+            </p>
+
+            <h3>Why we use your data</h3>
+            <p>
+              We use the information you provide solely to respond to your enquiry, prepare a
+              quote and (if you book a service) deliver the service and communicate appointment
+              reminders. Our lawful basis is your consent (Article 6(1)(a) UK GDPR) and, once a
+              service is booked, the performance of a contract (Article 6(1)(b) UK GDPR).
+            </p>
+
+            <h3>How long we keep it</h3>
+            <p>
+              Enquiry data is kept for up to 12 months unless you become a customer, in which
+              case we retain your contact details for as long as you remain on a regular cleaning
+              schedule plus 6 years for tax and accounting purposes.
+            </p>
+
+            <h3>Cookies</h3>
+            <p>
+              This site uses only strictly necessary cookies needed for the page to function. We
+              do not use analytics, advertising or third-party tracking cookies. Embedded
+              third-party content (e.g. WhatsApp links, Google Reviews link) is loaded only when
+              you click on it.
+            </p>
+
+            <h3>Sharing your data</h3>
+            <p>
+              We do not sell your data. We do not share it with third parties for marketing. Your
+              data may be processed by our email provider and accounting software solely to run
+              the business.
+            </p>
+
+            <h3>Your rights</h3>
+            <p>
+              Under UK GDPR you have the right to access, correct, delete, restrict or object to
+              processing of your personal data, and to data portability. To exercise these rights
+              email{" "}
+              <a href={`mailto:${email}`}>{email}</a>. You can also complain to the UK Information
+              Commissioner's Office (ICO) at <a href="https://ico.org.uk" target="_blank" rel="noreferrer">ico.org.uk</a>.
+            </p>
+
+            <h3>Contact</h3>
+            <p>
+              Fantastic Finish Ltd · Fareham, Hampshire · {phoneDisplay} ·{" "}
+              <a href={`mailto:${email}`}>{email}</a>
+            </p>
+
+            <div className="privacy-modal__footer">
+              <button
+                type="button"
+                className="button button--green"
+                onClick={() => setPrivacyOpen(false)}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
