@@ -21,7 +21,6 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    <link rel="preload" as="video" href="/cleaning-hero.mp4" type="video/mp4" fetchpriority="high" />
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
@@ -43,34 +42,8 @@
         "description": "Exterior cleaning services including window cleaning, gutter clearing, soffit and fascia cleaning, conservatory cleaning and soft washing."
       }
     </script>
-    <style>
-      /* Reserve hero space and start playing the video while JS is still parsing */
-      .hero-video-instant {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100svh;
-        object-fit: cover;
-        object-position: center;
-        z-index: 0;
-        pointer-events: none;
-      }
-    </style>
   </head>
-  <body style="margin: 0; background: #08110b;">
-    <video
-      class="hero-video-instant"
-      id="hero-video-instant"
-      autoplay
-      muted
-      loop
-      playsinline
-      preload="auto"
-      aria-hidden="true"
-    >
-      <source src="/cleaning-hero.mp4" type="video/mp4" />
-    </video>
+  <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

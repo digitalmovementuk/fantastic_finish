@@ -406,7 +406,18 @@ function App() {
       <main id="main">
         {/* HERO ─────────────────────────────────────────── */}
         <section id="top" className="hero-section">
-          {/* Hero video lives in index.html so playback starts during HTML parse, before JS hydrates. */}
+          <video
+            className="hero-video"
+            autoPlay={!reduceMotion}
+            muted
+            loop
+            playsInline
+            preload="auto"
+            aria-hidden="true"
+          >
+            <source src={`${import.meta.env.BASE_URL}cleaning-hero.mp4`} type="video/mp4" />
+          </video>
+
           <div className="hero-grid">
             <motion.div
               className="hero-copy"
